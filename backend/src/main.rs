@@ -1,31 +1,27 @@
-use tower_http::cors::{CorsLayer, Any};
-use axum::{routing::get, routing::post, Router};
-use sqlx::mysql::MySqlPoolOptions;
-use sqlx::MySql;
-mod database;
-mod note;
+use axum::{Router, routing::get, routing::post};
+use tower_http::cors::{Any, CorsLayer};
+mod db;
+mod handler;
+mod model;
 
-use note::{get_notes, create_note};
-use database::*;
+use crate::handler::note::{create_note, get_notes};
+use db::*;
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
+    let db = Database::new().await?;
 
-    let db= Database::new().await?;
-    
-    
     let router = Router::new()
-                            .route("/notes", get(get_notes))
-                            .route("/note", post(create_note))
-                            .layer(
-                                CorsLayer::new()
-                                .allow_origin(Any)
-                                .allow_methods(Any)
-                                .allow_headers(Any),
-                            );
+        .route("/notes", get(get_notes))
+        .route("/note", post(create_note))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        );
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-
 
     println!("Started Server at: {:?}", listener.local_addr().unwrap());
     println!("Waiting for incomming connections...");
@@ -33,6 +29,4 @@ async fn main() -> Result<(), sqlx::Error> {
     axum::serve(listener, router).await.unwrap();
 
     Ok(())
-
 }
-
